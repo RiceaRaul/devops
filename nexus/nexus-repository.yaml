@@ -38,6 +38,10 @@ spec:
       port: 8081
       protocol: TCP
       targetPort: 8081
+    - name: docker-repository
+      port: 5000
+      protocol: TCP
+      targetPort: 5000
   selector:
     app: sonatype-registry
 ---
@@ -100,5 +104,11 @@ spec:
       services:
         - name: sonatype-service
           port: 8081
+    - kind: Rule
+      match: Host(`nexus.ricearaul.com`) && Headers(`Host`, `nexus.ricearaul.com:5000`)
+      priority: 10
+      services:
+        - name: sonatype-service
+          port: 5000
   tls:
     secretName: nexus-certificate-secret
