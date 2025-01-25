@@ -1,0 +1,122 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-repository
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: sonatypestorage
+  namespace: nexus-repository
+  labels:
+    name: sonatypestorage
+spec:
+  storageClassName: local-path
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/data/nexus-repository"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonatype-registry-data
+  namespace: nexus-repository
+spec:
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonatype-service
+  namespace: nexus-repository
+spec:
+  ports:
+    - name: sonatype-registry
+      port: 8081
+      protocol: TCP
+      targetPort: 8081
+    - name: docker-registry
+      port: 5000
+      protocol: TCP
+      targetPort: 5000
+  selector:
+    app: sonatype-registry
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonatype-registry
+  namespace: nexus-repository
+  labels:
+    app: sonatype-registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sonatype-registry
+  template:
+    metadata:
+      labels:
+        app: sonatype-registry
+    spec:
+      volumes:
+        - name: registry-vol
+          persistentVolumeClaim:
+            claimName: sonatype-registry-data
+      containers:
+        - image: sonatype/nexus3
+          name: nexus
+          ports:
+            - containerPort: 8081
+            - containerPort: 5000
+          volumeMounts:
+            - name: registry-vol
+              mountPath: /nexus-data
+              subPath: sonatype
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: nexus-ingressroute-certificate
+  namespace: nexus-repository
+spec:
+  secretName: nexus-certificate-secret
+  issuerRef:
+    name: cloudflare-clusterissuer
+    kind: ClusterIssuer
+  dnsNames:
+    - nexus.ricearaul.com
+    - docker.nexus.ricearaul.com
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: nexus-ingressroute
+  namespace: nexus-repository
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`nexus.ricearaul.com`)
+      priority: 10
+      services:
+        - name: sonatype-service
+          port: 8081
+    - kind: Rule
+      match: Host(`docker.nexus.ricearaul.com`)
+      priority: 10
+      services:
+        - name: sonatype-service
+          port: 5000
+  tls:
+    secretName: nexus-certificate-secret
