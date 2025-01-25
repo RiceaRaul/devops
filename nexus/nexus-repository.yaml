@@ -104,8 +104,20 @@ spec:
       services:
         - name: sonatype-service
           port: 8081
+  tls:
+    secretName: nexus-certificate-secret
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: nexus-ingressroute-docker
+  namespace: nexus-repository
+spec:
+  entryPoints:
+    - websecure
+  routes:
     - kind: Rule
-      match: Host(`nexus.ricearaul.com`) && Headers(`Host`, `nexus.ricearaul.com:5000`)
+      match: Host(`docker.nexus.ricearaul.com`)
       priority: 10
       services:
         - name: sonatype-service
