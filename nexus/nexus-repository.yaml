@@ -4,15 +4,15 @@ metadata:
   name: sonatypestorage
   namespace: nexus-repository
   labels:
-    name: sonatypestorage
+    name: sonatypestorage # claim for volume
 spec:
-  storageClassName: local-path
+  storageClassName: local-path # Use K3s default local-path storage class
   capacity:
     storage: 20Gi
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: "/data/nexus-repository"
+    path: "/data/nexus-repository" # Local directory on the node
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
