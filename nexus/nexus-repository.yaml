@@ -88,6 +88,7 @@ spec:
     kind: ClusterIssuer
   dnsNames:
     - nexus.ricearaul.com
+    - docker.nexus.ricearaul.com
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
