@@ -100,10 +100,16 @@ spec:
     - websecure
   routes:
     - kind: Rule
-      match: Host(`nexus.ricearaul.com`)
+      match: Host(`nexus.ricearaul.com`) && PathPrefix(`/`)
       priority: 10
       services:
         - name: sonatype-service
           port: 8081
+    - kind: Rule
+      match: Host(`nexus.ricearaul.com`) && PathPrefix(`/v2/`)
+      priority: 10
+      services:
+        - name: sonatype-service
+          port: 5000
   tls:
     secretName: nexus-certificate-secret
