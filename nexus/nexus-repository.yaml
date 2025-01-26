@@ -34,8 +34,6 @@ metadata:
   namespace: nexus-repository
 spec:
   type: LoadBalancer
-  externalIPs:
-    - 45.8.150.89
   ports:
     - name: sonatype-registry
       port: 8081
