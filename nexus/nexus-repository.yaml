@@ -32,6 +32,9 @@ kind: Service
 metadata:
   name: sonatype-service
   namespace: nexus-repository
+type: LoadBalancer
+externalIPs:
+  - 45.8.150.89
 spec:
   ports:
     - name: sonatype-registry
@@ -42,6 +45,7 @@ spec:
       port: 5000
       protocol: TCP
       targetPort: 5000
+      exposePort: 5000
   selector:
     app: sonatype-registry
 ---
@@ -100,16 +104,10 @@ spec:
     - websecure
   routes:
     - kind: Rule
-      match: Host(`nexus.ricearaul.com`) && PathPrefix(`/`)
+      match: Host(`nexus.ricearaul.com`)
       priority: 10
       services:
         - name: sonatype-service
           port: 8081
-    - kind: Rule
-      match: Host(`nexus.ricearaul.com`) && PathPrefix(`/v2/`)
-      priority: 10
-      services:
-        - name: sonatype-service
-          port: 5000
   tls:
     secretName: nexus-certificate-secret
