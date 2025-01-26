@@ -33,16 +33,11 @@ metadata:
   name: sonatype-service
   namespace: nexus-repository
 spec:
-  type: LoadBalancer
   ports:
     - name: sonatype-registry
       port: 8081
       protocol: TCP
       targetPort: 8081
-    - name: docker-repository
-      port: 5000
-      protocol: TCP
-      targetPort: 5000
   selector:
     app: sonatype-registry
 ---
@@ -72,7 +67,6 @@ spec:
           name: nexus
           ports:
             - containerPort: 8081
-            - containerPort: 5000
           volumeMounts:
             - name: registry-vol
               mountPath: /nexus-data
