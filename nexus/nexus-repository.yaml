@@ -1,104 +1,202 @@
 apiVersion: v1
-kind: PersistentVolume
+kind: Namespace
 metadata:
-  name: sonatypestorage
-  namespace: nexus-repository
-  labels:
-    name: sonatypestorage # claim for volume
-spec:
-  storageClassName: local-path # Use K3s default local-path storage class
-  capacity:
-    storage: 20Gi
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: "/data/nexus-repository" # Local directory on the node
+  name: docmost-namespace
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: sonatype-registry-data
-  namespace: nexus-repository
+  name: docmost-pvc
+  namespace: docmost-namespace
 spec:
-  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 10Gi
+      storage: 1Gi
 ---
 apiVersion: v1
-kind: Service
+kind: PersistentVolumeClaim
 metadata:
-  name: sonatype-service
-  namespace: nexus-repository
+  name: db-pvc
+  namespace: docmost-namespace
 spec:
-  ports:
-    - name: sonatype-registry
-      port: 8081
-      protocol: TCP
-      targetPort: 8081
-  selector:
-    app: sonatype-registry
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: docmost-namespace
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 512Mi
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sonatype-registry
-  namespace: nexus-repository
-  labels:
-    app: sonatype-registry
+  name: db
+  namespace: docmost-namespace
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: sonatype-registry
+      app: db
   template:
     metadata:
       labels:
-        app: sonatype-registry
+        app: db
     spec:
-      volumes:
-        - name: registry-vol
-          persistentVolumeClaim:
-            claimName: sonatype-registry-data
       containers:
-        - image: sonatype/nexus3
-          name: nexus
-          ports:
-            - containerPort: 8081
+        - name: db
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: "docmost"
+            - name: POSTGRES_USER
+              value: "docmost"
+            - name: POSTGRES_PASSWORD
+              value: "STRONG_DB_PASSWORD"
           volumeMounts:
-            - name: registry-vol
-              mountPath: /nexus-data
-              subPath: sonatype
+            - mountPath: /var/lib/postgresql/data
+              name: db-storage
+      volumes:
+        - name: db-storage
+          persistentVolumeClaim:
+            claimName: db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: docmost-namespace
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: docmost-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.2-alpine
+          volumeMounts:
+            - mountPath: /data
+              name: redis-storage
+      volumes:
+        - name: redis-storage
+          persistentVolumeClaim:
+            claimName: redis-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: docmost-namespace
+spec:
+  ports:
+    - port: 6379
+  selector:
+    app: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docmost
+  namespace: docmost-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: docmost
+  template:
+    metadata:
+      labels:
+        app: docmost
+    spec:
+      containers:
+        - name: docmost
+          image: docmost/docmost:latest
+          env:
+            - name: APP_URL
+              value: "http://localhost:3000"
+            - name: APP_SECRET
+              value: "STRONG_SECRET_VALUE"
+            - name: DATABASE_URL
+              value: "postgresql://docmost:STRONG_DB_PASSWORD@db:5432/docmost?schema=public"
+            - name: REDIS_URL
+              value: "redis://redis:6379"
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - mountPath: /app/data/storage
+              name: docmost-storage
+      volumes:
+        - name: docmost-storage
+          persistentVolumeClaim:
+            claimName: docmost-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docmost
+  namespace: docmost-namespace
+spec:
+  ports:
+    - port: 3000
+      targetPort: 3000
+  selector:
+    app: docmost
+  type: LoadBalancer
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: nexus-ingressroute-certificate
-  namespace: nexus-repository
+  name: docmost-ingressroute-certificate
+  namespace: docmost-namespace
 spec:
-  secretName: nexus-certificate-secret
+  secretName: docmost-certificate-secret
   issuerRef:
     name: cloudflare-clusterissuer
     kind: ClusterIssuer
   dnsNames:
-    - nexus.ricearaul.com
+    - docmost.ricearaul.com
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: nexus-ingressroute
-  namespace: nexus-repository
+  name: docmost-ingressroute
+  namespace: docmost-namespace
 spec:
   entryPoints:
     - websecure
   routes:
     - kind: Rule
-      match: Host(`nexus.ricearaul.com`)
+      match: Host(`docmost.ricearaul.com`)
       priority: 10
       services:
-        - name: sonatype-service
-          port: 8081
+        - name: docmost
+          port: 3000
   tls:
-    secretName: nexus-certificate-secret
+    secretName: docmost-certificate-secret
