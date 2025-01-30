@@ -168,7 +168,6 @@ spec:
       targetPort: 3000
   selector:
     app: docmost
-  type: LoadBalancer
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
