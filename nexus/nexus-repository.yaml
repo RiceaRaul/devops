@@ -1,59 +1,17 @@
----
-# 1. Create the namespace for Nexus
+# 1. Create a dedicated namespace for Nexus
 apiVersion: v1
 kind: Namespace
 metadata:
   name: nexus-repository
 ---
-# 2. Define a PersistentVolume (PVs are cluster‑scoped, so no namespace)
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: sonatypestorage
-  labels:
-    name: sonatypestorage
-spec:
-  storageClassName: local-path
-  capacity:
-    storage: 20Gi
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: "/data/nexus-repository"  # Make sure this directory exists on your node
----
-# 3. Create a PersistentVolumeClaim (PVC)
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: sonatype-registry-data
-  namespace: nexus-repository
-spec:
-  storageClassName: local-path
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
----
-# 4. Create a ConfigMap for custom Nexus configuration
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nexus-custom-config
-  namespace: nexus-repository
-data:
-  nexus.properties: |
-    # Set the Docker HTTPS connector port to 5000
-    nexus.docker.https.port=5000
----
-# 5. Deploy Nexus Repository OSS with an init container to fix permissions and create required directories
+# 2. Deploy Nexus Repository OSS with an init container to fix permissions
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sonatype-registry
   namespace: nexus-repository
   labels:
-    app: sonatypestorage
+    app: sonatype-registry
 spec:
   replicas: 1
   selector:
@@ -64,50 +22,48 @@ spec:
       labels:
         app: sonatype-registry
     spec:
-      # Ensure the container runs as UID 200 and its volume is writable
+      # Set the user and group for the main container (ensuring Nexus can write to its data directory)
       securityContext:
         runAsUser: 200
         fsGroup: 200
-      # Init container: create directories and fix ownership
+      # Init container to prepare the Nexus data directory with proper permissions
       initContainers:
-        - name: fix-permissions
-          image: busybox
-          command:
-            - sh
-            - -c
-            - |
-              mkdir -p /nexus-data/log /nexus-data/tmp /nexus-data/instances
-              chown -R 200:200 /nexus-data
-          volumeMounts:
-            - name: registry-vol
-              mountPath: /nexus-data
-      volumes:
+      - name: fix-permissions
+        image: busybox
+        securityContext:
+          runAsUser: 0  # Run as root to modify permissions
+        command:
+          - sh
+          - -c
+          - |
+            mkdir -p /nexus-data/log /nexus-data/tmp /nexus-data/instances
+            chown -R 200:200 /nexus-data
+        volumeMounts:
         - name: registry-vol
-          persistentVolumeClaim:
-            claimName: sonatype-registry-data
-        - name: nexus-config
-          configMap:
-            name: nexus-custom-config
-            items:
-              - key: nexus.properties
-                path: nexus.properties
+          mountPath: /nexus-data
+      # Main Nexus container
       containers:
-        - name: nexus
-          image: sonatype/nexus3:latest
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 8081
-              name: ui
-            - containerPort: 5000
-              name: docker
-          volumeMounts:
-            - name: registry-vol
-              mountPath: /nexus-data
-            - name: nexus-config
-              mountPath: /nexus-data/etc/nexus.properties
-              subPath: nexus.properties
+      - name: nexus
+        image: sonatype/nexus3:latest
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: NEXUS_DATA
+            value: /nexus-data
+        ports:
+          - containerPort: 8081
+            name: ui
+          - containerPort: 5000
+            name: docker
+        workingDir: /nexus-data
+        volumeMounts:
+          # Use the ephemeral volume for Nexus data storage
+          - name: registry-vol
+            mountPath: /nexus-data
+      volumes:
+      - name: registry-vol
+        emptyDir: {}  # Ephemeral volume; data will not persist beyond the pod lifecycle
 ---
-# 6. Expose Nexus via a Service that provides two ports
+# 3. Create a Service exposing both the UI and Docker repository ports
 apiVersion: v1
 kind: Service
 metadata:
@@ -118,14 +74,14 @@ spec:
     app: sonatype-registry
   ports:
     - name: ui
-      port: 80         # Externally used for the UI (mapped to container port 8081)
+      port: 80         # Externally used for the Nexus dashboard (maps to container port 8081)
       targetPort: 8081
     - name: docker
-      port: 5000       # Externally used for the Docker repository (mapped to container port 5000)
+      port: 5000       # Externally used for the Docker repository (maps to container port 5000)
       targetPort: 5000
   type: ClusterIP
 ---
-# 7. Issue a TLS certificate for nexus.ricearaul.com using cert-manager
+# 4. Issue a TLS certificate for nexus.ricearaul.com (using cert-manager with your Cloudflare issuer)
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -139,7 +95,7 @@ spec:
   dnsNames:
     - nexus.ricearaul.com
 ---
-# 8. IngressRoute for the Nexus dashboard (UI) via Traefik’s websecure entrypoint (port 443)
+# 5. IngressRoute for the Nexus dashboard via Traefik’s websecure entrypoint (port 443)
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -158,7 +114,7 @@ spec:
   tls:
     secretName: nexus-certificate-secret
 ---
-# 9. IngressRoute for the Nexus Docker repository via Traefik’s docker entrypoint (port 5000)
+# 6. IngressRoute for the Nexus Docker repository via Traefik’s docker entrypoint (port 5000)
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
