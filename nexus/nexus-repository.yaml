@@ -1,82 +1,102 @@
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: sonatypestorage
-  namespace: nexus-repository
-  labels:
-    name: sonatypestorage # claim for volume
-spec:
-  storageClassName: local-path # Use K3s default local-path storage class
-  capacity:
-    storage: 20Gi
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: "/data/nexus-repository" # Local directory on the node
 ---
+# 1. Create a dedicated namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-namespace
+---
+# 2. ConfigMap with custom nexus.properties to set the Docker HTTPS port to 5000
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexus-custom-config
+  namespace: nexus-namespace
+data:
+  nexus.properties: |
+    # Set Docker HTTPS connector port to 5000 for Docker repository access
+    nexus.docker.https.port=5000
+---
+# 3. PersistentVolumeClaim for Nexus data
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: sonatype-registry-data
-  namespace: nexus-repository
+  name: nexus-data-pvc
+  namespace: nexus-namespace
 spec:
-  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 10Gi
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: sonatype-service
-  namespace: nexus-repository
-spec:
-  ports:
-    - name: sonatype-registry
-      port: 8081
-      protocol: TCP
-      targetPort: 8081
-  selector:
-    app: sonatype-registry
----
+# 4. Deployment for Nexus Repository OSS
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sonatype-registry
-  namespace: nexus-repository
-  labels:
-    app: sonatype-registry
+  name: nexus
+  namespace: nexus-namespace
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: sonatype-registry
+      app: nexus
   template:
     metadata:
       labels:
-        app: sonatype-registry
+        app: nexus
     spec:
-      volumes:
-        - name: registry-vol
-          persistentVolumeClaim:
-            claimName: sonatype-registry-data
       containers:
-        - image: sonatype/nexus3
-          name: nexus
+        - name: nexus
+          image: sonatype/nexus3:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
+              name: ui
+            - containerPort: 5000
+              name: docker
           volumeMounts:
-            - name: registry-vol
+            # Mount persistent storage for Nexus data
+            - name: nexus-data
               mountPath: /nexus-data
-              subPath: sonatype
+            # Mount the custom configuration to override nexus.properties
+            - name: nexus-config
+              mountPath: /nexus-data/etc/nexus.properties
+              subPath: nexus.properties
+      volumes:
+        - name: nexus-data
+          persistentVolumeClaim:
+            claimName: nexus-data-pvc
+        - name: nexus-config
+          configMap:
+            name: nexus-custom-config
+            items:
+              - key: nexus.properties
+                path: nexus.properties
 ---
+# 5. Service exposing both the UI and the Docker connector
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus
+  namespace: nexus-namespace
+spec:
+  selector:
+    app: nexus
+  ports:
+    - name: ui
+      port: 80
+      targetPort: 8081
+    - name: docker
+      port: 5000
+      targetPort: 5000
+  type: ClusterIP
+---
+# 6. Certificate for TLS (issued by your Cloudflare-based ClusterIssuer)
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: nexus-ingressroute-certificate
-  namespace: nexus-repository
+  name: nexus-certificate
+  namespace: nexus-namespace
 spec:
   secretName: nexus-certificate-secret
   issuerRef:
@@ -85,11 +105,12 @@ spec:
   dnsNames:
     - nexus.ricearaul.com
 ---
+# 7. Traefik IngressRoute for the Nexus UI (accessed via https://nexus.ricearaul.com)
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: nexus-ingressroute
-  namespace: nexus-repository
+  name: nexus-ui-ingressroute
+  namespace: nexus-namespace
 spec:
   entryPoints:
     - websecure
@@ -98,7 +119,26 @@ spec:
       match: Host(`nexus.ricearaul.com`)
       priority: 10
       services:
-        - name: sonatype-service
-          port: 8081
+        - name: nexus
+          port: 80
+  tls:
+    secretName: nexus-certificate-secret
+---
+# 8. Traefik IngressRoute for the Docker repository (accessed via https://nexus.ricearaul.com:5000)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: nexus-docker-ingressroute
+  namespace: nexus-namespace
+spec:
+  entryPoints:
+    - docker
+  routes:
+    - kind: Rule
+      match: Host(`nexus.ricearaul.com`)
+      priority: 10
+      services:
+        - name: nexus
+          port: 5000
   tls:
     secretName: nexus-certificate-secret
