@@ -1,50 +1,83 @@
 ---
-# 1. Create a dedicated namespace
+# 1. Create a dedicated namespace for Nexus
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: nexus-namespace
+  name: nexus-repository
 ---
-# 2. ConfigMap with custom nexus.properties to set the Docker HTTPS port to 5000
+# 2. Define a PersistentVolume (cluster‑scoped) using local-path storage
 apiVersion: v1
-kind: ConfigMap
+kind: PersistentVolume
 metadata:
-  name: nexus-custom-config
-  namespace: nexus-namespace
-data:
-  nexus.properties: |
-    # Set Docker HTTPS connector port to 5000 for Docker repository access
-    nexus.docker.https.port=5000
+  name: sonatypestorage
+  labels:
+    name: sonatypestorage
+spec:
+  storageClassName: local-path  # k3s default storage class
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/data/nexus-repository"  # Ensure this directory exists on your node
 ---
-# 3. PersistentVolumeClaim for Nexus data
+# 3. Create a PersistentVolumeClaim bound to the above PV
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: nexus-data-pvc
-  namespace: nexus-namespace
+  name: sonatype-registry-data
+  namespace: nexus-repository
 spec:
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 10Gi
 ---
-# 4. Deployment for Nexus Repository OSS
+# 4. Create a ConfigMap containing a custom nexus.properties file to set the Docker HTTPS port
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexus-custom-config
+  namespace: nexus-repository
+data:
+  nexus.properties: |
+    # Enable the Docker repository connector on port 5000
+    nexus.docker.https.port=5000
+---
+# 5. Deploy Nexus Repository OSS with both UI and Docker ports enabled
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nexus
-  namespace: nexus-namespace
+  name: sonatype-registry
+  namespace: nexus-repository
+  labels:
+    app: sonatype-registry
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: nexus
+      app: sonatype-registry
   template:
     metadata:
       labels:
-        app: nexus
+        app: sonatype-registry
     spec:
+      # Run the container as UID 200 and adjust group permissions
+      securityContext:
+        runAsUser: 200
+        fsGroup: 200
+      volumes:
+        - name: registry-vol
+          persistentVolumeClaim:
+            claimName: sonatype-registry-data
+        - name: nexus-config
+          configMap:
+            name: nexus-custom-config
+            items:
+              - key: nexus.properties
+                path: nexus.properties
       containers:
         - name: nexus
           image: sonatype/nexus3:latest
@@ -55,48 +88,38 @@ spec:
             - containerPort: 5000
               name: docker
           volumeMounts:
-            # Mount persistent storage for Nexus data
-            - name: nexus-data
+            # Mount the persistent storage to /nexus-data so Nexus can create its directories
+            - name: registry-vol
               mountPath: /nexus-data
-            # Mount the custom configuration to override nexus.properties
+            # Mount the custom nexus.properties to override the Docker port configuration
             - name: nexus-config
               mountPath: /nexus-data/etc/nexus.properties
               subPath: nexus.properties
-      volumes:
-        - name: nexus-data
-          persistentVolumeClaim:
-            claimName: nexus-data-pvc
-        - name: nexus-config
-          configMap:
-            name: nexus-custom-config
-            items:
-              - key: nexus.properties
-                path: nexus.properties
 ---
-# 5. Service exposing both the UI and the Docker connector
+# 6. Create a Service that exposes both the UI and Docker repository ports
 apiVersion: v1
 kind: Service
 metadata:
-  name: nexus
-  namespace: nexus-namespace
+  name: sonatype-service
+  namespace: nexus-repository
 spec:
   selector:
-    app: nexus
+    app: sonatype-registry
   ports:
     - name: ui
-      port: 80
+      port: 80         # Exposed port for the UI (will be mapped to container port 8081)
       targetPort: 8081
     - name: docker
-      port: 5000
+      port: 5000       # Exposed port for the Docker repository (will be mapped to container port 5000)
       targetPort: 5000
   type: ClusterIP
 ---
-# 6. Certificate for TLS (issued by your Cloudflare-based ClusterIssuer)
+# 7. Issue a TLS certificate for nexus.ricearaul.com using cert-manager (with your Cloudflare-based ClusterIssuer)
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: nexus-certificate
-  namespace: nexus-namespace
+  namespace: nexus-repository
 spec:
   secretName: nexus-certificate-secret
   issuerRef:
@@ -105,12 +128,12 @@ spec:
   dnsNames:
     - nexus.ricearaul.com
 ---
-# 7. Traefik IngressRoute for the Nexus UI (accessed via https://nexus.ricearaul.com)
+# 8. Expose the Nexus dashboard via Traefik’s websecure entrypoint
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: nexus-ui-ingressroute
-  namespace: nexus-namespace
+  namespace: nexus-repository
 spec:
   entryPoints:
     - websecure
@@ -119,17 +142,17 @@ spec:
       match: Host(`nexus.ricearaul.com`)
       priority: 10
       services:
-        - name: nexus
+        - name: sonatype-service
           port: 80
   tls:
     secretName: nexus-certificate-secret
 ---
-# 8. Traefik IngressRoute for the Docker repository (accessed via https://nexus.ricearaul.com:5000)
+# 9. Expose the Nexus Docker repository via Traefik’s docker entrypoint (on port 5000)
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: nexus-docker-ingressroute
-  namespace: nexus-namespace
+  namespace: nexus-repository
 spec:
   entryPoints:
     - docker
@@ -138,7 +161,7 @@ spec:
       match: Host(`nexus.ricearaul.com`)
       priority: 10
       services:
-        - name: nexus
+        - name: sonatype-service
           port: 5000
   tls:
     secretName: nexus-certificate-secret
