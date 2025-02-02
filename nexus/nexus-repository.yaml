@@ -73,9 +73,9 @@ spec:
               subPath: sonatype
           resources:
             limits:
-              memory: "1Gi"
+              memory: "2Gi"
             requests:
-              memory: "1Gi"
+              memory: "2Gi"
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
