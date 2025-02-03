@@ -38,10 +38,21 @@ spec:
       port: 8081
       protocol: TCP
       targetPort: 8081
-    - name: docker-https
+  selector:
+    app: sonatype-registry
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonatype-docker-service
+  namespace: nexus-repository
+spec:
+  type: LoadBalancer  # Expose only port 5000 externally
+  ports:
+    - name: docker-http-registry
       port: 5000
-      targetPort: 5000
       protocol: TCP
+      targetPort: 5000
   selector:
     app: sonatype-registry
 ---
