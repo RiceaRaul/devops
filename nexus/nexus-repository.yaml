@@ -38,6 +38,10 @@ spec:
       port: 8081
       protocol: TCP
       targetPort: 8081
+    - name: docker-https
+      port: 5000
+      targetPort: 5000
+      protocol: TCP
   selector:
     app: sonatype-registry
 ---
