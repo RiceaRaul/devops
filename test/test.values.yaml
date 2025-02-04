@@ -16,6 +16,7 @@ spec:
       containers:
         - name: alpine
           image: k3s.ricearaul.com:5000/alpine:latest
+          imagePullPolicy: Always
           command: ["/bin/sh", "-c", "while true; do echo Hello from Alpine; sleep 10; done"]
       imagePullSecrets:
         - name: nexus-registry-secret
