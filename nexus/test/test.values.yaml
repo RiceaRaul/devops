@@ -1,0 +1,27 @@
+replicaCount: 1
+
+image:
+  repository: k3s.ricearaul.com:5000/alpine
+  tag: latest
+  pullPolicy: Always
+
+imagePullSecrets:
+  - name: nexus-registry-secret
+
+container:
+  name: alpine
+  command: ["/bin/sh", "-c", "while true; do echo Hello from Alpine; sleep 10; done"]
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
