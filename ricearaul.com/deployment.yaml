@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ricearaul.com
-  namespace: ricearaul.com
+  name: ricearaul-com
+  namespace: ricearaul-com
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ricearaul.com
+      app: ricearaul-com
   template:
     metadata:
       labels:
-        app: ricearaul.com
+        app: ricearaul-com
     spec:
       containers:
-        - name: ricearaul.com
+        - name: ricearaul-com
           image: k3s.ricearaul.com:5000/ricearaul.com:latest
           imagePullPolicy: Always
 ---
@@ -22,9 +22,9 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: ricearaul-ingressroute-certificate
-  namespace: ricearaul.com
+  namespace: ricearaul-com
 spec:
-  secretName: ricearaul.com-certificate-secret
+  secretName: ricearaul-com-certificate-secret
   issuerRef:
     name: cloudflare-clusterissuer
     kind: ClusterIssuer
@@ -35,19 +35,19 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ricearaul-service
-  namespace: ricearaul.com
+  namespace: ricearaul-com
 spec:
   ports:
     - port: 80
       targetPort: 80
   selector:
-    app: ricearaul.com
+    app: ricearaul-com
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: ricearaul.com-ingressroute
-  namespace: ricearaul.com
+  name:ricearaul-com-ingressroute
+  namespace: ricearaul-com
 spec:
   entryPoints:
     - websecure
@@ -59,4 +59,4 @@ spec:
         - name: ricearaul-service
           port: 80
   tls:
-    secretName: ricearaul.com-certificate-secret
+    secretName: ricearaul-com-certificate-secret
