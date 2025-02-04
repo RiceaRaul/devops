@@ -1,21 +1,21 @@
-replicaCount: 1
-
-image:
-  repository: k3s.ricearaul.com:5000/alpine
-  tag: latest
-  pullPolicy: Always
-
-imagePullSecrets:
-  - name: nexus-registry-secret
-
-container:
-  name: alpine
-  command: ["/bin/sh", "-c", "while true; do echo Hello from Alpine; sleep 10; done"]
-
-resources:
-  limits:
-    cpu: 100m
-    memory: 128Mi
-  requests:
-    cpu: 50m
-    memory: 64Mi
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alpine-app
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alpine-app
+  template:
+    metadata:
+      labels:
+        app: alpine-app
+    spec:
+      containers:
+        - name: alpine
+          image: k3s.ricearaul.com:5000/alpine:latest
+          command: ["/bin/sh", "-c", "while true; do echo Hello from Alpine; sleep 10; done"]
+      imagePullSecrets:
+        - name: nexus-registry-secret
