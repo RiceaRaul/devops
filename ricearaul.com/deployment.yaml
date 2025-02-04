@@ -18,6 +18,19 @@ spec:
           image: k3s.ricearaul.com:5000/ricearaul.com:latest
           imagePullPolicy: Always
 ---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ricearaul-ingressroute-certificate
+  namespace: ricearaul.com
+spec:
+  secretName: ricearaul.com-certificate-secret
+  issuerRef:
+    name: cloudflare-clusterissuer
+    kind: ClusterIssuer
+  dnsNames:
+    - ricearaul.com
+---
 apiVersion: v1
 kind: Service
 metadata:
