@@ -49,8 +49,8 @@ spec:
     app: pointingpoker-ricearaul-com
   ports:
     - name: api-https
-      port: 8443
-      targetPort: 8443 
+      port: 8080
+      targetPort: 8080 
     - name: web-http
       port: 80
       targetPort: 80
@@ -78,6 +78,6 @@ spec:
       priority: 10
       services:
         - name: pointingpoker-ricearaul-service
-          port: 8443
+          port: 8080
   tls:
     secretName: pointingpoker-ricearaul-com-certificate-secret
