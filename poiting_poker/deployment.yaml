@@ -18,7 +18,7 @@ spec:
           image: k3s.ricearaul.com:5000/pointing_poker/api:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 443
+            - containerPort: 8443
         - name: pointingpoker-web-ricearaul-com
           image: k3s.ricearaul.com:5000/pointing_poker/web:latest
           imagePullPolicy: Always
@@ -49,8 +49,8 @@ spec:
     app: pointingpoker-ricearaul-com
   ports:
     - name: api-https
-      port: 443
-      targetPort: 443 
+      port: 8443
+      targetPort: 8443 
     - name: web-http
       port: 80
       targetPort: 80
@@ -78,6 +78,6 @@ spec:
       priority: 10
       services:
         - name: pointingpoker-ricearaul-service
-          port: 443
+          port: 8443
   tls:
     secretName: pointingpoker-ricearaul-com-certificate-secret
