@@ -17,13 +17,9 @@ spec:
         - name: pointingpoker-api-ricearaul-com
           image: k3s.ricearaul.com:5000/pointing_poker/api:latest
           imagePullPolicy: Always
-          ports:
-            - containerPort: 8443
         - name: pointingpoker-web-ricearaul-com
           image: k3s.ricearaul.com:5000/pointing_poker/web:latest
           imagePullPolicy: Always
-          ports:
-            - containerPort: 80
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
