@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pointingpoker-ricearaul-com
+  namespace: pointingpoker-ricearaul-com
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pointingpoker-ricearaul-com
+  template:
+    metadata:
+      labels:
+        app: pointingpoker-ricearaul-com
+    spec:
+      containers:
+        - name: pointingpoker-api-ricearaul-com
+          image: k3s.ricearaul.com:5000/pointing_poker/api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 443
+        - name: pointingpoker-web-ricearaul-com
+          image: k3s.ricearaul.com:5000/pointing_poker/web:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pointingpoker-ricearaul-ingressroute-certificate
+  namespace: pointingpoker-ricearaul-com
+spec:
+  secretName: pointingpoker-ricearaul-com-certificate-secret
+  issuerRef:
+    name: cloudflare-clusterissuer
+    kind: ClusterIssuer
+  dnsNames:
+    - pointingpoker.ricearaul.com
+    - apipointingpoker.ricearaul.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pointingpoker-ricearaul-service
+  namespace: pointingpoker-ricearaul-com
+spec:
+  selector:
+    app: pointingpoker-ricearaul-com
+  ports:
+     - name: api-https
+      port: 443
+      targetPort: 443 
+    - name: web-http
+      port: 80
+      targetPort: 80
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: pointingpoker-ricearaul-com-ingressroute
+  namespace: pointingpoker-ricearaul-com
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    # Route for Web UI (HTTP on pointingpoker.ricearaul.com)
+    - kind: Rule
+      match: Host(`pointingpoker.ricearaul.com`)
+      priority: 10
+      services:
+        - name: pointingpoker-ricearaul-service
+          port: 80
+
+    # Route for API (HTTPS on apipointingpoker.ricearaul.com)
+    - kind: Rule
+      match: Host(`apipointingpoker.ricearaul.com`)
+      priority: 10
+      services:
+        - name: pointingpoker-ricearaul-service
+          port: 443
+  tls:
+    secretName: pointingpoker-ricearaul-com-certificate-secret
