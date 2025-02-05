@@ -48,7 +48,7 @@ spec:
   selector:
     app: pointingpoker-ricearaul-com
   ports:
-     - name: api-https
+    - name: api-https
       port: 443
       targetPort: 443 
     - name: web-http
