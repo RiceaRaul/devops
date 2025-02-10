@@ -12,6 +12,6 @@ spec:
       priority: 10
       services:
         - name: jeager-ui-service
-          port: 80
+          port: 16686
   tls:
     secretName: jeager-ricearaul-com-certificate-secret
