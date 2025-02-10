@@ -1,17 +1,17 @@
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: jeager-ricearaul-com-ingressroute
-  namespace: jeager
+  name: jaeger-ricearaul-com-ingressroute
+  namespace: jaeger
 spec:
   entryPoints:
     - websecure
   routes:
     - kind: Rule
-      match: Host(`jeager.ricearaul.com`)
+      match: Host(`jaeger.ricearaul.com`)
       priority: 10
       services:
-        - name: jeager-ui-service
+        - name: jaeger-ui-service
           port: 16686
   tls:
-    secretName: jeager-ricearaul-com-certificate-secret
+    secretName: jaeger-ricearaul-com-certificate-secret
