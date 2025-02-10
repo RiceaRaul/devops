@@ -32,9 +32,15 @@ spec:
             - containerPort: 14268  # HTTP for collector
             - containerPort: 14250  # GRPC for collector
             - containerPort: 9411   # HTTP for Zipkin
+            - containerPort: 4317   # GRPC for OpenTelemetry (OTLP)
+            - containerPort: 4318   # HTTP for OpenTelemetry (OTLP)
           env:
+            - name: SPAN_STORAGE_TYPE
+              value: "badger"
             - name: COLLECTOR_ZIPKIN_HTTP_PORT
               value: "9411"
+            - name: COLLECTOR_OTLP_ENABLED
+              value: "true"  # ✅ Enables OpenTelemetry support
             - name: LOG_LEVEL
               value: "debug"
             - name: MEMORY_MAX_TRACES

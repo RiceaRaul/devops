@@ -28,6 +28,12 @@ spec:
     - name: zipkin
       port: 9411
       protocol: TCP
+    - name: otlp-grpc  # ✅ OpenTelemetry gRPC (Required for Traefik)
+      port: 4317
+      protocol: TCP
+    - name: otlp-http  # ✅ OpenTelemetry HTTP (Alternative for Traefik)
+      port: 4318
+      protocol: TCP
   type: LoadBalancer
 ---
 apiVersion: v1
