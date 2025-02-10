@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: jeager-ricearaul-ingressroute-certificate
+  namespace: jeager
+spec:
+  secretName: jeager-ricearaul-com-certificate-secret
+  issuerRef:
+    name: cloudflare-clusterissuer
+    kind: ClusterIssuer
+  dnsNames:
+    - jeager.ricearaul.com
