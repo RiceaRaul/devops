@@ -5,3 +5,6 @@ resources:
   - service-account.yaml
   - agent-role.yaml
   - agent-rolebinding.yaml
+  - agent-storage.yaml
+  - agent-pvc.yaml
+  
