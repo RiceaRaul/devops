@@ -40,16 +40,3 @@ spec:
           port: 80
   tls:
     secretName: jenkins-ricearaul-certificate-secret
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: jenkins-agent-cache
-  namespace: jenkins
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: local-path
-  resources:
-    requests:
-      storage: 10Gi
