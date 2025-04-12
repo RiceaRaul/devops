@@ -21,7 +21,7 @@ spec:
           - name: JENKINS_AGENT_NAME
             value: "angular-agent"
           - name: JENKINS_URL
-            value: "http://jenkins.jenkins.svc.cluster.local:8080"
+            value: "https://jenkins.ricearaul.com"
           - name: JENKINS_AGENT_WORKDIR
             value: "/home/jenkins"
           - name: JENKINS_SECRET
@@ -33,7 +33,7 @@ spec:
           - jenkins-agent
         args:
           - -url
-          - "http://jenkins.jenkins.svc.cluster.local:8080"
+          - "https://jenkins.ricearaul.com"
           - "-secret"
           - "$(JENKINS_SECRET)"
           - "-name"
