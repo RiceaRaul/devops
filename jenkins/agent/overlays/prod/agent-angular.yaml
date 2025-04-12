@@ -18,15 +18,24 @@ spec:
       - name: jnlp
         image: jenkins/inbound-agent:latest
         env:
-        - name: JENKINS_URL
-          value: "http://jenkins.jenkins.svc.cluster.local:8080"
-        - name: JENKINS_AGENT_NAME
-          value: "angular-agent"
-        - name: JENKINS_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: jenkins-angular-agent-secret
-              key: agent-secret
+          - name: JENKINS_AGENT_NAME
+            value: "angular-agent"
+          - name: JENKINS_URL
+            value: "http://jenkins.jenkins.svc.cluster.local:8080"
+          - name: JENKINS_AGENT_WORKDIR
+            value: "/home/jenkins"
+          - name: JENKINS_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: jenkins-angular-agent-secret
+                key: agent-secret
+        args:
+          - -url
+          - "${JENKINS_URL}"
+          - -workDir
+          - "${JENKINS_AGENT_WORKDIR}"
+          - "${JENKINS_SECRET}"
+          - "${JENKINS_AGENT_NAME}"
         resources:
           requests:
             cpu: "200m"
