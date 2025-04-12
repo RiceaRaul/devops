@@ -31,9 +31,7 @@ spec:
                 key: agent-secret
         args:
           - -url
-          - "${JENKINS_URL}"
-          - -workDir
-          - "${JENKINS_AGENT_WORKDIR}"
+          - "http://jenkins.jenkins.svc.cluster.local:8080"
           - "${JENKINS_SECRET}"
           - "${JENKINS_AGENT_NAME}"
         resources:
