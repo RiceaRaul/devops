@@ -13,23 +13,12 @@ spec:
       labels:
         app: ricearaul-com
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: ricearaul-com
-          image: k3s.ricearaul.com:5000/ricearaul.com:latest
+          image: ghcr.io/ricearaul/ricearual.com:latest
           imagePullPolicy: Always
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: ricearaul-ingressroute-certificate
-  namespace: ricearaul-com
-spec:
-  secretName: ricearaul-com-certificate-secret
-  issuerRef:
-    name: cloudflare-clusterissuer
-    kind: ClusterIssuer
-  dnsNames:
-    - ricearaul.com
 ---
 apiVersion: v1
 kind: Service
@@ -50,13 +39,11 @@ metadata:
   namespace: ricearaul-com
 spec:
   entryPoints:
-    - websecure
+    - web
   routes:
     - kind: Rule
-      match: Host(`ricearaul.com`)
+      match: Host(`ricearaul.com`) || Host(`ricearaul.inf.lan`) 
       priority: 10
       services:
         - name: ricearaul-service
           port: 80
-  tls:
-    secretName: ricearaul-com-certificate-secret
