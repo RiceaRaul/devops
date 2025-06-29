@@ -1,0 +1,124 @@
+# Default values for docmost
+# This is a YAML-formatted file.
+
+# Namespace configuration
+namespace:
+  create: true
+  name: docmost-namespace
+
+# Database configuration
+database:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 1Gi
+    accessMode: ReadWriteOnce
+  credentials:
+    database: "docmost"
+    username: "docmost"
+    password: "STRONG_DB_PASSWORD"
+  service:
+    port: 5432
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Redis configuration
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: "7.2-alpine"
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 512Mi
+    accessMode: ReadWriteOnce
+  service:
+    port: 6379
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Docmost application configuration
+docmost:
+  image:
+    repository: docmost/docmost
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    port: 3000
+    targetPort: 3000
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 1Gi
+    accessMode: ReadWriteOnce
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  env:
+    # Application settings
+    APP_URL: "http://localhost:3000"
+    APP_SECRET: "STRONG_SECRET_VALUE"
+    
+    # Database connection (auto-generated from database config)
+    DATABASE_URL: ""  # Will be auto-generated
+    
+    # Redis connection (auto-generated from redis config)
+    REDIS_URL: ""  # Will be auto-generated
+    
+    # Additional environment variables
+    NODE_ENV: "production"
+    PORT: "3000"
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  hosts:
+    - host: docmost.ricearaul.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: docmost-certificate-secret
+      hosts:
+        - docmost.ricearaul.com
+
+# Certificate configuration
+certificate:
+  enabled: true
+  secretName: docmost-certificate-secret
+  issuerRef:
+    name: cloudflare-clusterissuer
+    kind: ClusterIssuer
+  dnsNames:
+    - docmost.ricearaul.com
+
+# Traefik IngressRoute configuration
+ingressRoute:
+  enabled: true
+  entryPoints:
+    - websecure
+  priority: 10 

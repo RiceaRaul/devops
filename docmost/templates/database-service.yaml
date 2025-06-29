@@ -1,0 +1,12 @@
+{{- if .Values.database.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: {{ .Values.namespace.name }}
+spec:
+  ports:
+    - port: {{ .Values.database.service.port }}
+  selector:
+    app: db
+{{- end }} 

@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docmost
+  namespace: {{ .Values.namespace.name }}
+spec:
+  replicas: {{ .Values.docmost.replicaCount }}
+  selector:
+    matchLabels:
+      app: docmost
+  template:
+    metadata:
+      labels:
+        app: docmost
+    spec:
+      containers:
+        - name: docmost
+          image: {{ .Values.docmost.image.repository }}:{{ .Values.docmost.image.tag }}
+          imagePullPolicy: {{ .Values.docmost.image.pullPolicy }}
+          env:
+            - name: APP_URL
+              value: {{ .Values.docmost.env.APP_URL | quote }}
+            - name: APP_SECRET
+              value: {{ .Values.docmost.env.APP_SECRET | quote }}
+            {{- if .Values.database.enabled }}
+            - name: DATABASE_URL
+              value: "postgresql://{{ .Values.database.credentials.username }}:{{ .Values.database.credentials.password }}@db:{{ .Values.database.service.port }}/{{ .Values.database.credentials.database }}?schema=public"
+            {{- end }}
+            {{- if .Values.redis.enabled }}
+            - name: REDIS_URL
+              value: "redis://redis:{{ .Values.redis.service.port }}"
+            {{- end }}
+            {{- range $key, $value := .Values.docmost.env }}
+            {{- if and (ne $key "APP_URL") (ne $key "APP_SECRET") (ne $key "DATABASE_URL") (ne $key "REDIS_URL") }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.docmost.service.targetPort }}
+          {{- if .Values.docmost.persistence.enabled }}
+          volumeMounts:
+            - mountPath: /app/data/storage
+              name: docmost-storage
+          {{- end }}
+          {{- if .Values.docmost.resources }}
+          resources:
+            {{- toYaml .Values.docmost.resources | nindent 12 }}
+          {{- end }}
+      {{- if .Values.docmost.persistence.enabled }}
+      volumes:
+        - name: docmost-storage
+          persistentVolumeClaim:
+            claimName: docmost-pvc
+      {{- end }} 
