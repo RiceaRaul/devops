@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ricearaul-com
+  namespace: ricearaul-com
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ricearaul-com
+  template:
+    metadata:
+      labels:
+        app: ricearaul-com
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: ricearaul-com
+          image: ghcr.io/ricearaul/ricearual.com:latest
+          imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ricearaul-service
+  namespace: ricearaul-com
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: ricearaul-com
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: ricearaul-com-ingressroute
+  namespace: ricearaul-com
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      match: Host(`ricearaul.com`) || Host(`ricearaul.inf.lan`) 
+      priority: 10
+      services:
+        - name: ricearaul-service
+          port: 80

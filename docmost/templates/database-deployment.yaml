@@ -1,0 +1,43 @@
+{{- if .Values.database.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: {{ .Values.namespace.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+        - name: db
+          image: {{ .Values.database.image.repository }}:{{ .Values.database.image.tag }}
+          imagePullPolicy: {{ .Values.database.image.pullPolicy }}
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.database.credentials.database | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.database.credentials.username | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.database.credentials.password | quote }}
+          {{- if .Values.database.persistence.enabled }}
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: db-storage
+          {{- end }}
+          {{- if .Values.database.resources }}
+          resources:
+            {{- toYaml .Values.database.resources | nindent 12 }}
+          {{- end }}
+      {{- if .Values.database.persistence.enabled }}
+      volumes:
+        - name: db-storage
+          persistentVolumeClaim:
+            claimName: db-pvc
+      {{- end }}
+{{- end }} 
