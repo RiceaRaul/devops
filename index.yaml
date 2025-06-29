@@ -3,9 +3,9 @@ entries:
   docmost:
   - apiVersion: v2
     appVersion: latest
-    created: "2025-06-29T12:17:09.488187994+03:00"
+    created: "2025-06-29T13:07:33.984567256+03:00"
     description: A Helm chart for Docmost application
-    digest: 463d41f1de12bdbf4669e7bb6234657360338bf485f8cadce33b911f8f2bab7d
+    digest: 5ace0fb16207ed0b99d04c497557812c9c70f7a33dd49141b19698da72759a07
     home: https://github.com/docmost/docmost
     keywords:
     - docmost
@@ -19,6 +19,6 @@ entries:
     - https://github.com/docmost/docmost
     type: application
     urls:
-    - https://RiceaRaul.github.io/devops/docmost-0.1.0.tgz
-    version: 0.1.0
-generated: "2025-06-29T12:17:09.487377342+03:00"
+    - https://RiceaRaul.github.io/devops/docmost-0.1.1.tgz
+    version: 0.1.1
+generated: "2025-06-29T13:07:33.98321035+03:00"
