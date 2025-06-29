@@ -96,29 +96,21 @@ ingress:
   enabled: true
   className: ""
   annotations: {}
-  hosts:
-    - host: docmost.ricearaul.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - secretName: docmost-certificate-secret
-      hosts:
-        - docmost.ricearaul.com
-
-# Certificate configuration
-certificate:
-  enabled: true
-  secretName: docmost-certificate-secret
-  issuerRef:
-    name: cloudflare-clusterissuer
-    kind: ClusterIssuer
-  dnsNames:
-    - docmost.ricearaul.com
+  # Mandatory host (required)
+  mandatoryHost: "docmost.ricearaul.com"
+  # Optional additional hosts
+  additionalHosts: []
+  # Example additional hosts:
+  # additionalHosts:
+  #   - "docmost.example.com"
+  #   - "docs.example.com"
+  paths:
+    - path: /
+      pathType: Prefix
 
 # Traefik IngressRoute configuration
 ingressRoute:
   enabled: true
   entryPoints:
-    - websecure
+    - web
   priority: 10 

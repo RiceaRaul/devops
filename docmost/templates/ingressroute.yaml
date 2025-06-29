@@ -11,11 +11,9 @@ spec:
     {{- end }}
   routes:
     - kind: Rule
-      match: Host(`{{ (index .Values.ingress.hosts 0).host }}`)
+      match: Host(`{{ .Values.ingress.mandatoryHost }}`){{- if .Values.ingress.additionalHosts }}{{- range .Values.ingress.additionalHosts }} || Host(`{{ . }}`){{- end }}{{- end }}
       priority: {{ .Values.ingressRoute.priority }}
       services:
         - name: docmost
           port: {{ .Values.docmost.service.port }}
-  tls:
-    secretName: {{ .Values.certificate.secretName }}
 {{- end }} 

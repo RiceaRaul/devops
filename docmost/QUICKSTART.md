@@ -57,17 +57,30 @@ database:
 
 docmost:
   env:
-    APP_URL: "https://docmost.mydomain.com"
+    APP_URL: "http://docmost.mydomain.com"
     APP_SECRET: "my-secret-key"
 
 ingress:
-  hosts:
-    - host: docmost.mydomain.com
-
-certificate:
-  dnsNames:
-    - docmost.mydomain.com
+  mandatoryHost: "docmost.mydomain.com"
+  additionalHosts:
+    - "docs.mydomain.com"
+    - "wiki.mydomain.com"
 ```
+
+## Multiple Hosts Configuration
+
+The chart supports multiple hosts using a single IngressRoute with OR conditions:
+
+```yaml
+ingress:
+  mandatoryHost: "docmost.mydomain.com"  # Required
+  additionalHosts:                       # Optional
+    - "docs.mydomain.com"
+    - "wiki.mydomain.com"
+    - "documentation.mydomain.com"
+```
+
+This creates a single rule: `Host('docmost.mydomain.com') || Host('docs.mydomain.com') || Host('wiki.mydomain.com')`
 
 ## Verify Installation
 
@@ -84,9 +97,10 @@ kubectl get ingressroute -n docmost-namespace
 
 ## Access the Application
 
-Once deployed, you can access Docmost at:
-- `http://localhost:3000` (if using port-forward)
-- `https://docmost.mydomain.com` (if ingress is configured)
+Once deployed, you can access Docmost at any of the configured hosts:
+- `http://docmost.mydomain.com`
+- `http://docs.mydomain.com`
+- `http://wiki.mydomain.com`
 
 ## Uninstall
 
