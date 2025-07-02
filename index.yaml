@@ -21,4 +21,15 @@ entries:
     urls:
     - https://RiceaRaul.github.io/devops/docmost-0.1.1.tgz
     version: 0.1.1
-generated: "2025-06-29T13:07:33.98321035+03:00"
+  github-runner:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2025-07-02T17:55:56.364743751+03:00"
+    description: A Helm chart for Kubernetes
+    digest: 61f20c9c0a943a3bab4c0cecadbf56827e0b28fc182ba8e42106e53f6b26569d
+    name: github-runner
+    type: application
+    urls:
+    - https://RiceaRaul.github.io/devops/github-runner-0.1.0.tgz
+    version: 0.1.0
+generated: "2025-07-02T17:55:56.3640051+03:00"
